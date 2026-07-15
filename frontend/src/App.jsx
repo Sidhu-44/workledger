@@ -14,6 +14,14 @@ import Register from "./pages/Register";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import WorkEntries from "./pages/WorkEntries";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import FAQ from "./pages/FAQ";
+import HelpCenter from "./pages/HelpCenter";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Changelog from "./pages/Changelog";
+
 
 export default function App() {
   return (
@@ -41,6 +49,14 @@ export default function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/FAQ" element={<FAQ/>}/>
+          <Route path="/help-center" element={<HelpCenter />} />
+          <Route path="/about" element={<About/>}/>
+          <Route path="/contact" element={<Contact/>}/>
+          <Route path="/changelog" element={<Changelog/>}/>
+
         </Route>
 
         <Route path="*" element={<NotFound />} />
