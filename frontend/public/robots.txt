@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://workledger-zeta.vercel.app/sitemap.xml

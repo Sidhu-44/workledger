@@ -21,13 +21,14 @@ import HelpCenter from "./pages/HelpCenter";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Changelog from "./pages/Changelog";
-
+import Landing from "./pages/Landing";
 
 export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
         {/* Public / auth routes */}
+        <Route path="/" element={<Landing />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -41,7 +42,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
@@ -51,7 +52,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
-          <Route path="/FAQ" element={<FAQ/>}/>
+          <Route path="/faq" element={<FAQ/>}/>
           <Route path="/help-center" element={<HelpCenter />} />
           <Route path="/about" element={<About/>}/>
           <Route path="/contact" element={<Contact/>}/>
