@@ -22,7 +22,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Changelog from "./pages/Changelog";
 import Landing from "./pages/Landing";
-
+import AiAssistant from "./pages/AiAssistant";
 export default function App() {
   return (
     <ErrorBoundary>
@@ -57,6 +57,7 @@ export default function App() {
           <Route path="/about" element={<About/>}/>
           <Route path="/contact" element={<Contact/>}/>
           <Route path="/changelog" element={<Changelog/>}/>
+          <Route path="/ai-assistant" element={<AiAssistant />} />
 
         </Route>
 

@@ -11,9 +11,15 @@ call into services/ai_service.py (create it) that talks to the provider,
 using the *_API_KEY settings already wired up in config.py.
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_user
+from database.database import get_db
 from models.user import User
+from schemas.ai_chat import ChatRequest, ChatResponse
+from schemas.ai_insights import DashboardInsights
+from services.ai_chat_service import AiChatService
+from services.insights_service import InsightsService
 
 router = APIRouter(prefix="/api/ai", tags=["AI Ready (Future)"])
 
@@ -66,3 +72,29 @@ async def whatsapp_reminder(work_entry_id: str, current_user: User = Depends(get
 async def sms_reminder(work_entry_id: str, current_user: User = Depends(get_current_user)):
     """Future: send an SMS payment-due reminder to the customer for a work entry."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=NOT_IMPLEMENTED)
+
+
+@router.get("/dashboard-insights", response_model=DashboardInsights)
+def dashboard_insights(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Computes AI Business Insights for the logged-in user's data.
+
+    Fully implemented today using plain SQL aggregation + Python (see
+    services/insights_service.py) -- no external AI provider is called.
+    The response shape is designed so a future version can hand this same
+    computed data to Gemini/OpenAI and swap in LLM-generated `recommendations`
+    without changing this route or the frontend that consumes it.
+    """
+    return InsightsService(db).get_dashboard_insights(current_user.id)
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat(payload: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Rule-based (keyword-intent) chat over the logged-in user's real data.
+
+    See services/ai_chat_service.py for the intent detection and per-intent
+    SQL handlers. No external AI provider is called here yet.
+    """
+    reply = AiChatService(db, current_user).generate_reply(payload.message)
+    return ChatResponse(reply=reply)
