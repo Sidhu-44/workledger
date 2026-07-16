@@ -1,50 +1,63 @@
 import { createContext, useContext, useEffect, useState } from "react";
-
+import { storage } from "../utils/storage";
 import { authService } from "../services/authService";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("wl_user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  // const [user, setUser] = useState(() => {
+  //   const stored = localStorage.getItem("wl_user");
+  //   return stored ? JSON.parse(stored) : null;
+  // });
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("wl_access_token");
+  const loadSession = async () => {
+    const token = await storage.get("wl_access_token");
+
     if (!token) {
       setLoading(false);
       return;
     }
-    authService
-      .getProfile()
-      .then((profile) => {
-        setUser(profile);
-        localStorage.setItem("wl_user", JSON.stringify(profile));
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
 
-  const persistSession = (data) => {
-    localStorage.setItem("wl_access_token", data.access_token);
-    localStorage.setItem("wl_refresh_token", data.refresh_token);
-    localStorage.setItem("wl_user", JSON.stringify(data.user));
-    setUser(data.user);
+    try {
+      const profile = await authService.getProfile();
+
+      setUser(profile);
+
+      await storage.set("wl_user", profile);
+    } catch {
+      await storage.remove("wl_access_token");
+      await storage.remove("wl_refresh_token");
+      await storage.remove("wl_user");
+
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  loadSession();
+}, []);
+
+const persistSession = async (data) => {
+  await storage.set("wl_access_token", data.access_token);
+  await storage.set("wl_refresh_token", data.refresh_token);
+  await storage.set("wl_user", data.user);
+
+  setUser(data.user);
+};
 
   const login = async (payload) => {
     const data = await authService.login(payload);
-    persistSession(data);
+    await persistSession(data);
     return data;
   };
 
   const register = async (payload) => {
     const data = await authService.register(payload);
-    persistSession(data);
+    await persistSession(data);
     return data;
   };
 
@@ -54,15 +67,15 @@ export function AuthProvider({ children }) {
     } catch {
       // ignore network errors on logout, still clear local session
     }
-    localStorage.removeItem("wl_access_token");
-    localStorage.removeItem("wl_refresh_token");
-    localStorage.removeItem("wl_user");
+    await storage.remove("wl_access_token");
+await storage.remove("wl_refresh_token");
+await storage.remove("wl_user");
     setUser(null);
   };
 
-  const updateUser = (updated) => {
+  const updateUser = async (updated) => {
     setUser(updated);
-    localStorage.setItem("wl_user", JSON.stringify(updated));
+    await storage.set("wl_user", updated);
   };
 
   return (

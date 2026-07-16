@@ -17,7 +17,13 @@ export default function CustomerForm({ defaultValues, onSubmit, onCancel, isSubm
   }, [defaultValues, reset]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+        onSubmit={(e) => {
+          console.log("FORM SUBMITTED");
+          handleSubmit(onSubmit)(e);
+        }}
+        className="space-y-4"
+      >
       <Input label="Name" error={errors.name?.message} {...register("name", { required: "Name is required" })} />
       <Input label="Phone Number" {...register("phone_number")} />
       <Input label="Address" {...register("address")} />
@@ -33,9 +39,13 @@ export default function CustomerForm({ defaultValues, onSubmit, onCancel, isSubm
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" isLoading={isSubmitting}>
-          Save Customer
-        </Button>
+        <Button
+            type="submit"
+            isLoading={isSubmitting}
+            onClick={() => console.log("BUTTON CLICKED")}
+          >
+            Save Customer
+          </Button>
       </div>
     </form>
   );

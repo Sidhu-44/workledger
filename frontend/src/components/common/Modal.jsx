@@ -16,11 +16,14 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]" onClick={onClose} />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+     <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
       <div
-        className={`relative w-full ${maxWidth} bg-white dark:bg-gray-900 rounded-xl2 shadow-card border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto`}
-      >
+  className={`relative z-10 w-full ${maxWidth} bg-white dark:bg-gray-900 rounded-xl2 shadow-card border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto`}
+>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           <button

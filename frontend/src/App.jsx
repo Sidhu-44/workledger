@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
-
+import { Navigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthLayout from "./layouts/AuthLayout";
@@ -24,11 +25,21 @@ import Changelog from "./pages/Changelog";
 import Landing from "./pages/Landing";
 import AiAssistant from "./pages/AiAssistant";
 export default function App() {
+  const isNativeApp = Capacitor.isNativePlatform();
   return (
     <ErrorBoundary>
       <Routes>
         {/* Public / auth routes */}
-        <Route path="/" element={<Landing />} />
+                <Route
+                  path="/"
+                  element={
+                    isNativeApp ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Landing />
+                    )
+                  }
+                />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
