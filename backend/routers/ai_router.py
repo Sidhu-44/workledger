@@ -89,12 +89,11 @@ def dashboard_insights(current_user: User = Depends(get_current_user), db: Sessi
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def chat(payload: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
-    Rule-based (keyword-intent) chat over the logged-in user's real data.
-
-    See services/ai_chat_service.py for the intent detection and per-intent
-    SQL handlers. No external AI provider is called here yet.
+    Gemini 2.5 Flash-powered chat, grounded in the logged-in user's real data
+    (see services/ai_chat_service.py). Falls back to the rule-based reply on
+    any Gemini error, timeout, or missing API key.
     """
-    reply = AiChatService(db, current_user).generate_reply(payload.message)
+    reply = await AiChatService(db, current_user).generate_reply(payload.message, payload.history)
     return ChatResponse(reply=reply)

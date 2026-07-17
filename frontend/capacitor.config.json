@@ -1,5 +1,15 @@
 {
   "appId": "com.sidhu.workmate",
   "appName": "WorkMate",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#081A33",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_INSIDE",
+      "showSpinner": false
+    }
+  }
 }

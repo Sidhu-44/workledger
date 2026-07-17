@@ -44,6 +44,11 @@ class Settings:
     # --- Future AI integration (not implemented, kept modular) ---
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta/models"
+    GEMINI_TIMEOUT_SECONDS: float = float(
+        os.getenv("GEMINI_TIMEOUT_SECONDS", "15")
+    )
     WHATSAPP_API_TOKEN: str = os.getenv("WHATSAPP_API_TOKEN", "")
     SMS_API_TOKEN: str = os.getenv("SMS_API_TOKEN", "")
 

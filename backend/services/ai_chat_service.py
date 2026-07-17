@@ -14,7 +14,10 @@ questions the keyword rules don't recognise) and/or as a rephrasing pass
 over the structured facts each handler below already computes.
 """
 from datetime import date
+import asyncio
+from google import genai
 
+from config import settings
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -52,10 +55,87 @@ class AiChatService:
             "total_earnings": self._handle_total_earnings,
         }
 
-    def generate_reply(self, message: str) -> str:
+    async def generate_reply(self, message: str, history: list | None = None) -> str:
+        
+        context = self._build_context(message)
+        fallback = self._rule_based_reply(message)
+
+        if not settings.GEMINI_API_KEY:
+            return fallback
+
+        try:
+            return await self._call_gemini(
+                message=message,
+                context=context,
+                history=history,
+                fallback=fallback,
+            )
+        except Exception as e:
+            print("=" * 60)
+            print("GEMINI ERROR")
+            print(type(e).__name__)
+            print(str(e))
+            print("=" * 60)
+            return fallback
+
+    def _rule_based_reply(self, message: str) -> str:
         intent = self._detect_intent(message)
         handler = self._handlers.get(intent, self._handle_fallback)
         return handler()
+    def _build_context(self, message: str) -> str:
+        intent = self._detect_intent(message)
+        handler = self._handlers.get(intent)
+        facts = [
+            f"- {self._handle_pending_payments()}",
+            f"- {self._handle_top_customer()}",
+            f"- {self._handle_average_payment()}",
+            f"- {self._handle_this_month_earnings()}",
+            f"- {self._handle_total_earnings()}",
+        ]
+        if handler is not None:
+            highlighted = handler()
+            facts.insert(0, f"- Most relevant fact for this question: {highlighted}")
+        return "\n".join(facts)
+
+    async def _call_gemini(
+        self,
+        message: str,
+        context: str,
+        history: list | None,
+        fallback: str,
+    ) -> str:
+        try:
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+            prompt = f"""
+            You are the AI Business Assistant inside {self.user.full_name}'s Worker Ledger app.
+
+            You answer ONLY using the business facts below.
+
+            Business Facts:
+            {context}
+
+            Previous Conversation:
+            """
+
+            if history:
+                for item in history[-10:]:
+                    prompt += f"\n{item.role.title()}: {item.content}"
+
+            prompt += f"\nUser: {message}"
+
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+            )
+
+            if response.text:
+                return response.text.strip()
+
+            return fallback
+
+        except Exception as e:
+            return fallback
 
     def _detect_intent(self, message: str) -> str:
         text = message.lower()
