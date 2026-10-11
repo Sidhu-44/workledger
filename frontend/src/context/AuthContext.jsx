@@ -1,85 +1,172 @@
-import { createContext, useContext, useEffect, useState } from "react";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import { storage } from "../utils/storage";
 import { authService } from "../services/authService";
 
 const AuthContext = createContext(null);
 
+const SESSION_TIMEOUT = 10000;
+
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
 export function AuthProvider({ children }) {
-  // const [user, setUser] = useState(() => {
-  //   const stored = localStorage.getItem("wl_user");
-  //   return stored ? JSON.parse(stored) : null;
-  // });
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const loadSession = async () => {
-    const token = await storage.get("wl_access_token");
+    let active = true;
 
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    const loadSession = async () => {
+      try {
+        // Restore the saved access token.
+        const token = await withTimeout(
+          storage.get("wl_access_token"),
+          SESSION_TIMEOUT,
+          "Loading the saved session timed out"
+        );
 
-    try {
-      const profile = await authService.getProfile();
+        if (!active) return;
 
-      setUser(profile);
+        // No saved token: show the logged-out application.
+        if (!token) {
+          return;
+        }
 
-      await storage.set("wl_user", profile);
-    } catch {
-      await storage.remove("wl_access_token");
-      await storage.remove("wl_refresh_token");
-      await storage.remove("wl_user");
+        // Restore the authenticated user's profile.
+        const profile = await withTimeout(
+          authService.getProfile(),
+          SESSION_TIMEOUT,
+          "Loading the user profile timed out"
+        );
 
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+        if (!active) return;
+
+        setUser(profile);
+
+        // Keep the locally stored profile synchronized.
+        try {
+          await storage.set("wl_user", profile);
+        } catch (storageError) {
+          console.error(
+            "Could not update the saved user profile:",
+            storageError
+          );
+        }
+      } catch (error) {
+        if (!active) return;
+
+        console.error("Session restoration failed:", error);
+
+        // Clear credentials only when the server explicitly
+        // rejects the access token as unauthorized.
+        if (error?.response?.status === 401) {
+          setUser(null);
+
+          // Do not let storage cleanup block the UI.
+          Promise.allSettled([
+            storage.remove("wl_access_token"),
+            storage.remove("wl_refresh_token"),
+            storage.remove("wl_user"),
+          ]).catch((cleanupError) => {
+            console.error(
+              "Could not clear the expired session:",
+              cleanupError
+            );
+          });
+        }
+
+        // For network errors or timeouts, preserve saved credentials.
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSession();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const persistSession = async (data) => {
+    await storage.set("wl_access_token", data.access_token);
+    await storage.set("wl_refresh_token", data.refresh_token);
+    await storage.set("wl_user", data.user);
+
+    setUser(data.user);
   };
-
-  loadSession();
-}, []);
-
-const persistSession = async (data) => {
-  await storage.set("wl_access_token", data.access_token);
-  await storage.set("wl_refresh_token", data.refresh_token);
-  await storage.set("wl_user", data.user);
-
-  setUser(data.user);
-};
 
   const login = async (payload) => {
     const data = await authService.login(payload);
+
     await persistSession(data);
+
     return data;
   };
 
   const register = async (payload) => {
     const data = await authService.register(payload);
+
     await persistSession(data);
+
     return data;
   };
 
   const logout = async () => {
     try {
       await authService.logout();
-    } catch {
-      // ignore network errors on logout, still clear local session
+    } catch (error) {
+      // Logout must still clear the local session if the
+      // backend is temporarily unavailable.
+      console.error("Server logout failed:", error);
+    } finally {
+      setUser(null);
+
+      await Promise.allSettled([
+        storage.remove("wl_access_token"),
+        storage.remove("wl_refresh_token"),
+        storage.remove("wl_user"),
+      ]);
     }
-    await storage.remove("wl_access_token");
-await storage.remove("wl_refresh_token");
-await storage.remove("wl_user");
-    setUser(null);
   };
 
   const updateUser = async (updated) => {
     setUser(updated);
+
     await storage.set("wl_user", updated);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -87,6 +174,12 @@ await storage.remove("wl_user");
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used within an AuthProvider"
+    );
+  }
+
   return context;
 }
